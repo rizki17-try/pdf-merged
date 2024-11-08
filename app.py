@@ -1,15 +1,15 @@
-import streamlit as st
+import os
+import shutil
 import re
+import datetime
+import json
 import pandas as pd
+import streamlit as st
 from PyPDF2 import PdfReader, PdfWriter
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import os
-import shutil
-import datetime
-import json
 
-# Path ke file Excel konfigurasi dan file bundel
+# Path ke file konfigurasi dan bundel
 AMM_REF_TO_TASK_CARD_PATH = "./AMM REF TO TASK CARD.xlsx"
 REGISTRATION_TO_CONFIG_CODE_PATH = "./REGISTRATION TO CONFIG.xlsx"
 BUNDLES = {
@@ -23,13 +23,10 @@ BUNDLES = {
     "OMR_SAOC": "./PDF BUNDEL (OMR_SAOC).pdf",
     "TCI": "./PDF BUNDEL (TCI).pdf",
     "GIA": "./PDF BUNDEL GIA.pdf",
-
-    # Tambahkan konfigurasi bundel lainnya jika ada
 }
 
 # Fungsi untuk memuat data Task Card dari file Excel
-def load_task_card_data():
-    file_path = "AMM REF TO TASK CARD.xlsx"  # Jalur relatif untuk file Excel
+def load_task_card_data(file_path=AMM_REF_TO_TASK_CARD_PATH):
     try:
         df = pd.read_excel(file_path)
         return {row['AMM REF']: row['Nomor Task Card'] for _, row in df.iterrows()}
@@ -37,44 +34,44 @@ def load_task_card_data():
         st.error(f"File tidak ditemukan: {file_path}")
         return None
 
-# Fungsi untuk memuat data konfigurasi dari file Excel
+# Fungsi untuk memuat data konfigurasi dari file .txt, .csv, dan .json
 def load_configuration_data():
-    config_files = [f for f in os.listdir() if f.endswith('.txt') or f.endswith('.csv') or f.endswith('.json')]
     config_data = {}
+    config_files = [f for f in os.listdir() if f.endswith(('.txt', '.csv', '.json'))]
 
     for config_file in config_files:
         try:
             if config_file.endswith('.txt'):
                 with open(config_file, 'r') as file:
-                    config_data[config_file] = file.read()  # Membaca isi file .txt
+                    config_data[config_file] = file.read()
             elif config_file.endswith('.csv'):
-                config_data[config_file] = pd.read_csv(config_file)  # Membaca file CSV
+                config_data[config_file] = pd.read_csv(config_file)
             elif config_file.endswith('.json'):
                 with open(config_file, 'r') as file:
-                    config_data[config_file] = json.load(file)  # Membaca file JSON
+                    config_data[config_file] = json.load(file)
         except FileNotFoundError:
-            print(f"File tidak ditemukan: {config_file}")
-
+            st.error(f"File tidak ditemukan: {config_file}")
     return config_data
 
+# Fungsi untuk memuat file PDF ke dalam dictionary
 def load_pdf_files():
-    pdf_files = [f for f in os.listdir() if f.endswith('.pdf')]  # Mengambil semua file PDF di direktori yang sama
+    pdf_files = [f for f in os.listdir() if f.endswith('.pdf')]
     pdf_data = {}
 
     for pdf_file in pdf_files:
         try:
             with open(pdf_file, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
+                pdf_reader = PdfReader(file)
                 pdf_text = ""
                 for page_num in range(len(pdf_reader.pages)):
                     pdf_text += pdf_reader.pages[page_num].extract_text()
                 pdf_data[pdf_file] = pdf_text
-        except FileNotFoundError:
-            print(f"File tidak ditemukan: {pdf_file}")
+        except Exception as e:
+            st.error(f"Error membaca file {pdf_file}: {str(e)}")
     
     return pdf_data
 
-# Fungsi untuk menemukan nomor Task Card berdasarkan AMM REF di dokumen order
+# Fungsi untuk menemukan nomor Task Card berdasarkan AMM REF
 def find_task_card_number(order_doc, task_card_data):
     order_reader = PdfReader(order_doc)
     for page in order_reader.pages:
@@ -82,7 +79,7 @@ def find_task_card_number(order_doc, task_card_data):
         match = re.search(r"AMM REF\.:([\d-]+)", text)
         if match:
             amm_ref = match.group(1).strip()
-            return task_card_data.get(amm_ref, None)
+            return task_card_data.get(amm_ref)
     return None
 
 # Fungsi untuk menemukan nomor registrasi dalam dokumen order
@@ -95,10 +92,6 @@ def find_registration_number(order_doc):
             return match.group(1).strip()
     return None
 
-# Fungsi untuk mendapatkan kode konfigurasi berdasarkan nomor registrasi
-def find_configuration_code(registration_number, config_data):
-    return config_data.get(registration_number, None)
-
 # Fungsi untuk menambahkan watermark tanggal pada setiap halaman PDF
 def add_watermark(input_pdf, output_pdf):
     reader = PdfReader(input_pdf)
@@ -108,7 +101,7 @@ def add_watermark(input_pdf, output_pdf):
     watermark_pdf_path = "/content/temp_watermark.pdf"
     c = canvas.Canvas(watermark_pdf_path, pagesize=letter)
     c.setFont("Helvetica", 8)
-    c.drawString(500, 10, f"Created on: {today_date}")  # Posisi di bawah kanan
+    c.drawString(500, 10, f"Created on: {today_date}")
     c.save()
 
     watermark_reader = PdfReader(watermark_pdf_path)
@@ -120,6 +113,16 @@ def add_watermark(input_pdf, output_pdf):
 
     with open(output_pdf, "wb") as out_file:
         writer.write(out_file)
+
+# Fungsi untuk menemukan halaman-halaman Task Card di dalam PDF bundel berdasarkan nomor Task Card
+def find_task_card_pages(pdf_path, task_card_number):
+    pages_with_task_card = []
+    reader = PdfReader(pdf_path)
+    for page_num, page in enumerate(reader.pages):
+        text = page.extract_text()
+        if task_card_number in text:
+            pages_with_task_card.append(page_num)
+    return pages_with_task_card
 
 # Fungsi untuk memisahkan Task Card dari PDF bundel
 def split_task_card(pdf_path, task_card_number, output_folder):
@@ -133,29 +136,15 @@ def split_task_card(pdf_path, task_card_number, output_folder):
     for page_num in pages:
         writer.add_page(reader.pages[page_num])
 
-    # Tentukan nama file output
     output_pdf = f"{output_folder}/{task_card_number}_extracted.pdf"
     with open(output_pdf, "wb") as out_file:
         writer.write(out_file)
 
-    # Menambahkan watermark
     watermark_output_pdf = f"{output_folder}/{task_card_number}_watermarked.pdf"
     add_watermark(output_pdf, watermark_output_pdf)
-
-    # Hapus file sementara tanpa watermark
     os.remove(output_pdf)
 
     return watermark_output_pdf if os.path.exists(watermark_output_pdf) else None
-
-  # Fungsi untuk menemukan halaman-halaman Task Card di dalam PDF bundel berdasarkan nomor Task Card
-def find_task_card_pages(pdf_path, task_card_number):
-    pages_with_task_card = []
-    reader = PdfReader(pdf_path)
-    for page_num, page in enumerate(reader.pages):
-        text = page.extract_text()
-        if task_card_number in text:
-            pages_with_task_card.append(page_num)
-    return pages_with_task_card
 
 # Fungsi untuk menggabungkan dokumen order dengan Task Card
 def merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_path):
@@ -172,56 +161,7 @@ def merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_path):
         writer.write(out_file)
     st.success(f"Penggabungan selesai. Hasil disimpan di {output_path}")
 
-# Fungsi untuk membagi PDF berdasarkan nomor order
-def split_pdf_by_order(uploaded_file, output_folder):
-    reader = PdfReader(uploaded_file)
-    total_pages = len(reader.pages)
-
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    writer = PdfWriter()
-    order_number = None
-    output_path = None
-
-    for i in range(total_pages):
-        page = reader.pages[i]
-        page_text = page.extract_text()
-
-        match = re.search(r"ORDER\s*[:]*\s*(\d+)", page_text)
-        if match:
-            new_order_number = match.group(1)
-
-            if order_number is not None and order_number != new_order_number:
-                if len(writer.pages) > 0:
-                    output_path = f"{output_folder}/order_{order_number}.pdf"
-                    with open(output_path, "wb") as outfile:
-                        writer.write(outfile)
-
-                writer = PdfWriter()
-
-            order_number = new_order_number
-            output_path = f"{output_folder}/order_{order_number}.pdf"
-
-        writer.add_page(page)
-
-    if len(writer.pages) > 0:
-        output_path = f"{output_folder}/order_{order_number}.pdf"
-        with open(output_path, "wb") as outfile:
-            writer.write(outfile)
-
-# Fungsi untuk menggabungkan semua file PDF hasil penggabungan ke satu file PDF
-def merge_all_pdfs(pdf_files, final_output_path):
-    writer = PdfWriter()
-    for pdf_file in pdf_files:
-        reader = PdfReader(pdf_file)
-        for page in reader.pages:
-            writer.add_page(page)
-
-    with open(final_output_path, "wb") as out_file:
-        writer.write(out_file)
-
-# Streamlit UI
+# Fungsi utama untuk Streamlit UI
 def main():
     st.title("JOB CARD GENERATOR")
     st.markdown("### Integrating Order and Maintenance Manual Extract")
@@ -231,6 +171,10 @@ def main():
     if dokumen_order:
         task_card_data = load_task_card_data()
         config_data = load_configuration_data()
+
+        if task_card_data is None or config_data is None:
+            st.error("Data tidak dapat dimuat. Harap periksa file konfigurasi dan Task Card.")
+            return
 
         output_folder = "/content/split_orders"
         split_pdf_by_order(dokumen_order, output_folder)
