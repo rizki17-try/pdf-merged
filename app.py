@@ -7,34 +7,72 @@ from reportlab.pdfgen import canvas
 import os
 import shutil
 import datetime
+import json
 
 # Path ke file Excel konfigurasi dan file bundel
-AMM_REF_TO_TASK_CARD_PATH = "/content/AMM REF TO TASK CARD.xlsx"
-REGISTRATION_TO_CONFIG_CODE_PATH = "/content/REGISTRATION TO CONFIG.xlsx"
+AMM_REF_TO_TASK_CARD_PATH = "./AMM REF TO TASK CARD.xlsx"
+REGISTRATION_TO_CONFIG_CODE_PATH = "./REGISTRATION TO CONFIG.xlsx"
 BUNDLES = {
-    "AWW": "/content/PDF BUNDEL (AWW).pdf",
-    "CGP": "/content/PDF BUNDEL (CGP).pdf",
-    "CHI": "/content/PDF BUNDEL (CHI).pdf",
-    "GEF": "/content/PDF BUNDEL (GEF).pdf",
-    "HAZ": "/content/PDF BUNDEL (HAZ).pdf",
-    "ILF": "/content/PDF BUNDEL (ILF).pdf",
-    "LOM": "/content/PDF BUNDEL (LOM).pdf",
-    "OMR_SAOC": "/content/PDF BUNDEL (OMR_SAOC).pdf",
-    "TCI": "/content/PDF BUNDEL (TCI).pdf",
-    "GIA": "/content/PDF BUNDEL GIA.pdf",
+    "AWW": "./PDF BUNDEL (AWW).pdf",
+    "CGP": "./PDF BUNDEL (CGP).pdf",
+    "CHI": "./PDF BUNDEL (CHI).pdf",
+    "GEF": "./PDF BUNDEL (GEF).pdf",
+    "HAZ": "./PDF BUNDEL (HAZ).pdf",
+    "ILF": "./PDF BUNDEL (ILF).pdf",
+    "LOM": "./PDF BUNDEL (LOM).pdf",
+    "OMR_SAOC": "./PDF BUNDEL (OMR_SAOC).pdf",
+    "TCI": "./PDF BUNDEL (TCI).pdf",
+    "GIA": "./PDF BUNDEL GIA.pdf",
 
     # Tambahkan konfigurasi bundel lainnya jika ada
 }
 
 # Fungsi untuk memuat data Task Card dari file Excel
 def load_task_card_data():
-    df = pd.read_excel(AMM_REF_TO_TASK_CARD_PATH)
-    return {row['AMM REF']: row['Nomor Task Card'] for _, row in df.iterrows()}
+    file_path = "AMM REF TO TASK CARD.xlsx"  # Jalur relatif untuk file Excel
+    try:
+        df = pd.read_excel(file_path)
+        return {row['AMM REF']: row['Nomor Task Card'] for _, row in df.iterrows()}
+    except FileNotFoundError:
+        st.error(f"File tidak ditemukan: {file_path}")
+        return None
 
 # Fungsi untuk memuat data konfigurasi dari file Excel
 def load_configuration_data():
-    df = pd.read_excel(REGISTRATION_TO_CONFIG_CODE_PATH)
-    return {row['Nomor Registrasi']: row['Kode Konfigurasi'] for _, row in df.iterrows()}
+    config_files = [f for f in os.listdir() if f.endswith('.txt') or f.endswith('.csv') or f.endswith('.json')]
+    config_data = {}
+
+    for config_file in config_files:
+        try:
+            if config_file.endswith('.txt'):
+                with open(config_file, 'r') as file:
+                    config_data[config_file] = file.read()  # Membaca isi file .txt
+            elif config_file.endswith('.csv'):
+                config_data[config_file] = pd.read_csv(config_file)  # Membaca file CSV
+            elif config_file.endswith('.json'):
+                with open(config_file, 'r') as file:
+                    config_data[config_file] = json.load(file)  # Membaca file JSON
+        except FileNotFoundError:
+            print(f"File tidak ditemukan: {config_file}")
+
+    return config_data
+
+def load_pdf_files():
+    pdf_files = [f for f in os.listdir() if f.endswith('.pdf')]  # Mengambil semua file PDF di direktori yang sama
+    pdf_data = {}
+
+    for pdf_file in pdf_files:
+        try:
+            with open(pdf_file, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                pdf_text = ""
+                for page_num in range(len(pdf_reader.pages)):
+                    pdf_text += pdf_reader.pages[page_num].extract_text()
+                pdf_data[pdf_file] = pdf_text
+        except FileNotFoundError:
+            print(f"File tidak ditemukan: {pdf_file}")
+    
+    return pdf_data
 
 # Fungsi untuk menemukan nomor Task Card berdasarkan AMM REF di dokumen order
 def find_task_card_number(order_doc, task_card_data):
