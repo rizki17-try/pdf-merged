@@ -9,19 +9,19 @@ import shutil
 import datetime
 
 # Path ke file Excel konfigurasi dan file bundel
-AMM_REF_TO_TASK_CARD_PATH = "/content/AMM REF TO TASK CARD.xlsx"
-REGISTRATION_TO_CONFIG_CODE_PATH = "/content/REGISTRATION TO CONFIG.xlsx"
+AMM_REF_TO_TASK_CARD_PATH = "AMM REF TO TASK CARD.xlsx"
+REGISTRATION_TO_CONFIG_CODE_PATH = "REGISTRATION TO CONFIG.xlsx"
 BUNDLES = {
-    "AWW": "/content/PDF BUNDEL (AWW).pdf",
-    "CGP": "/content/PDF BUNDEL (CGP).pdf",
-    "CHI": "/content/PDF BUNDEL (CHI).pdf",
-    "GEF": "/content/PDF BUNDEL (GEF).pdf",
-    "HAZ": "/content/PDF BUNDEL (HAZ).pdf",
-    "ILF": "/content/PDF BUNDEL (ILF).pdf",
-    "LOM": "/content/PDF BUNDEL (LOM).pdf",
-    "OMR_SAOC": "/content/PDF BUNDEL (OMR_SAOC).pdf",
-    "TCI": "/content/PDF BUNDEL (TCI).pdf",
-    "GIA": "/content/PDF BUNDEL GIA.pdf",
+    "AWW": "PDF BUNDEL (AWW).pdf",
+    "CGP": "PDF BUNDEL (CGP).pdf",
+    "CHI": "PDF BUNDEL (CHI).pdf",
+    "GEF": "PDF BUNDEL (GEF).pdf",
+    "HAZ": "PDF BUNDEL (HAZ).pdf",
+    "ILF": "PDF BUNDEL (ILF).pdf",
+    "LOM": "PDF BUNDEL (LOM).pdf",
+    "OMR_SAOC": "PDF BUNDEL (OMR_SAOC).pdf",
+    "TCI": "PDF BUNDEL (TCI).pdf",
+    "GIA": "PDF BUNDEL GIA.pdf",
 
     # Tambahkan konfigurasi bundel lainnya jika ada
 }
@@ -60,28 +60,6 @@ def find_registration_number(order_doc):
 # Fungsi untuk mendapatkan kode konfigurasi berdasarkan nomor registrasi
 def find_configuration_code(registration_number, config_data):
     return config_data.get(registration_number, None)
-
-# Fungsi untuk menambahkan watermark tanggal pada setiap halaman PDF
-def add_watermark(input_pdf, output_pdf):
-    reader = PdfReader(input_pdf)
-    writer = PdfWriter()
-
-    today_date = datetime.datetime.today().strftime('%Y-%m-%d')
-    watermark_pdf_path = "/content/temp_watermark.pdf"
-    c = canvas.Canvas(watermark_pdf_path, pagesize=letter)
-    c.setFont("Helvetica", 8)
-    c.drawString(500, 10, f"Created on: {today_date}")  # Posisi di bawah kanan
-    c.save()
-
-    watermark_reader = PdfReader(watermark_pdf_path)
-    watermark_page = watermark_reader.pages[0]
-
-    for page in reader.pages:
-        page.merge_page(watermark_page)
-        writer.add_page(page)
-
-    with open(output_pdf, "wb") as out_file:
-        writer.write(out_file)
 
 # Fungsi untuk memisahkan Task Card dari PDF bundel
 def split_task_card(pdf_path, task_card_number, output_folder):
@@ -194,7 +172,7 @@ def main():
         task_card_data = load_task_card_data()
         config_data = load_configuration_data()
 
-        output_folder = "/content/split_orders"
+        output_folder = "split_orders"
         split_pdf_by_order(dokumen_order, output_folder)
 
         output_files = []
