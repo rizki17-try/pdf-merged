@@ -78,11 +78,6 @@ def split_task_card(pdf_path, task_card_number, output_folder):
     with open(output_pdf, "wb") as out_file:
         writer.write(out_file)
 
-    # Hapus file sementara tanpa watermark
-    os.remove(output_pdf)
-
-    return watermark_output_pdf if os.path.exists(watermark_output_pdf) else None
-
   # Fungsi untuk menemukan halaman-halaman Task Card di dalam PDF bundel berdasarkan nomor Task Card
 def find_task_card_pages(pdf_path, task_card_number):
     pages_with_task_card = []
