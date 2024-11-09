@@ -90,18 +90,23 @@ def find_task_card_pages(pdf_path, task_card_number):
 
 # Fungsi untuk menggabungkan dokumen order dengan Task Card
 def merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_path):
-    writer = PdfWriter()
-    order_reader = PdfReader(order_pdf_path)
-    for page in order_reader.pages:
-        writer.add_page(page)
+    try:
+        writer = PdfWriter()
+        order_reader = PdfReader(order_pdf_path)
+        for page in order_reader.pages:
+            writer.add_page(page)
 
-    task_card_reader = PdfReader(task_card_pdf_path)
-    for page in task_card_reader.pages:
-        writer.add_page(page)
+        task_card_reader = PdfReader(task_card_pdf_path)
+        for page in task_card_reader.pages:
+            writer.add_page(page)
 
-    with open(output_path, "wb") as out_file:
-        writer.write(out_file)
-    st.success(f"Penggabungan selesai. Hasil disimpan di {output_path}")
+        # Tulis ke file output
+        with open(output_path, "wb") as out_file:
+            writer.write(out_file)
+        st.success(f"Penggabungan selesai. Hasil disimpan di {output_path}")
+    except Exception as e:
+        st.error(f"Terjadi kesalahan saat menggabungkan: {e}")
+        return None
 
 # Fungsi untuk membagi PDF berdasarkan nomor order
 def split_pdf_by_order(uploaded_file, output_folder):
@@ -144,13 +149,21 @@ def split_pdf_by_order(uploaded_file, output_folder):
 # Fungsi untuk menggabungkan semua file PDF hasil penggabungan ke satu file PDF
 def merge_all_pdfs(pdf_files, final_output_path):
     writer = PdfWriter()
-    for pdf_file in pdf_files:
-        reader = PdfReader(pdf_file)
-        for page in reader.pages:
-            writer.add_page(page)
+    try:
+        for pdf_file in pdf_files:
+            if not os.path.exists(pdf_file):
+                st.warning(f"File {pdf_file} tidak ditemukan.")
+                continue
 
-    with open(final_output_path, "wb") as out_file:
-        writer.write(out_file)
+            reader = PdfReader(pdf_file)
+            for page in reader.pages:
+                writer.add_page(page)
+
+        with open(final_output_path, "wb") as out_file:
+            writer.write(out_file)
+        st.success("Semua PDF berhasil digabungkan.")
+    except Exception as e:
+        st.error(f"Kesalahan saat menggabungkan semua file: {e}")
 
 # Streamlit UI
 def main():
