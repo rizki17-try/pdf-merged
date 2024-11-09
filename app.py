@@ -26,6 +26,24 @@ BUNDLES = {
     # Tambahkan konfigurasi bundel lainnya jika ada
 }
 
+# Fungsi untuk memeriksa apakah file Task Card ada di direktori
+def check_task_card_exists(task_card_pdf_path):
+    return os.path.exists(task_card_pdf_path)
+
+# Fungsi untuk memproses dokumen order dan task card
+def process_order_with_task_card(order_pdf_path, task_card_number, task_card_folder, output_folder):
+    # Mencari file Task Card yang sesuai
+    task_card_pdf_path = os.path.join(task_card_folder, f"{task_card_number}_extracted.pdf")
+
+    if not check_task_card_exists(task_card_pdf_path):
+        st.warning(f"Task Card untuk {task_card_number} tidak ditemukan. Melewati pemrosesan order {order_pdf_path}.")
+        return
+
+    # Jika Task Card ditemukan, lanjutkan pemrosesan
+    output_pdf_path = os.path.join(output_folder, f"combined_{task_card_number}.pdf")
+    merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_pdf_path)
+    st.success(f"Order {task_card_number} berhasil diproses.")
+
 # Fungsi untuk memuat data Task Card dari file Excel
 def load_task_card_data():
     df = pd.read_excel(AMM_REF_TO_TASK_CARD_PATH)
@@ -80,24 +98,6 @@ def split_task_card(pdf_path, task_card_number, output_folder):
 
     # Pastikan file PDF hasil ekstraksi dikembalikan
     return output_pdf
-
-# Fungsi untuk memeriksa apakah file Task Card ada di direktori
-def check_task_card_exists(task_card_pdf_path):
-    return os.path.exists(task_card_pdf_path)
-
-# Fungsi untuk memproses dokumen order dan task card
-def process_order_with_task_card(order_pdf_path, task_card_number, task_card_folder, output_folder):
-    # Mencari file Task Card yang sesuai
-    task_card_pdf_path = os.path.join(task_card_folder, f"{task_card_number}_extracted.pdf")
-
-    if not check_task_card_exists(task_card_pdf_path):
-        st.warning(f"Task Card untuk {task_card_number} tidak ditemukan. Melewati pemrosesan order {order_pdf_path}.")
-        return
-
-    # Jika Task Card ditemukan, lanjutkan pemrosesan
-    output_pdf_path = os.path.join(output_folder, f"combined_{task_card_number}.pdf")
-    merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_pdf_path)
-    st.success(f"Order {task_card_number} berhasil diproses.")
 
 # Fungsi untuk menggabungkan dokumen order dengan Task Card
 def merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_path):
