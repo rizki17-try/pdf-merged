@@ -8,6 +8,10 @@ import os
 import shutil
 import datetime
 
+# Fungsi untuk mengecek apakah file Task Card ada
+def check_task_card_exists(task_card_pdf_path):
+    return os.path.exists(task_card_pdf_path)
+
 # Path ke file Excel konfigurasi dan file bundel
 AMM_REF_TO_TASK_CARD_PATH = "AMM REF TO TASK CARD.xlsx"
 REGISTRATION_TO_CONFIG_CODE_PATH = "REGISTRATION TO CONFIG.xlsx"
@@ -214,10 +218,17 @@ def main():
             if not config_code:
                 continue
 
-            task_card_pdf = None
-            if config_code in BUNDLES:
-                task_card_pdf = split_task_card(BUNDLES[config_code], task_card_number, output_folder)
+            # Tentukan path file Task Card
+            task_card_pdf_path = BUNDLES.get(config_code)
+            if not task_card_pdf_path:
+                continue
 
+            # Periksa apakah Task Card ada
+            if not check_task_card_exists(task_card_pdf_path):
+                st.warning(f"Task Card untuk {task_card_number} tidak ditemukan. Melewati order {order_file_path}.")
+                continue  # Lewatkan order ini dan lanjutkan ke order berikutnya
+
+            task_card_pdf = split_task_card(task_card_pdf_path, task_card_number, output_folder)
             if task_card_pdf:
                 output_pdf = f"merged_{order_file.replace('.pdf', '')}_{task_card_number}.pdf"
                 merge_order_with_task_card(order_file_path, task_card_pdf, output_pdf)
