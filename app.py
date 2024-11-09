@@ -62,6 +62,7 @@ def find_configuration_code(registration_number, config_data):
     return config_data.get(registration_number, None)
 
 # Fungsi untuk memisahkan Task Card dari PDF bundel
+# Fungsi untuk memisahkan Task Card dari PDF bundel
 def split_task_card(pdf_path, task_card_number, output_folder):
     pages = find_task_card_pages(pdf_path, task_card_number)
     if not pages:
@@ -77,6 +78,24 @@ def split_task_card(pdf_path, task_card_number, output_folder):
     output_pdf = f"{output_folder}/{task_card_number}_extracted.pdf"
     with open(output_pdf, "wb") as out_file:
         writer.write(out_file)
+
+    # Pastikan file PDF hasil ekstraksi dikembalikan
+    return output_pdf
+
+# Fungsi untuk menggabungkan dokumen order dengan Task Card
+def merge_order_with_task_card(order_pdf_path, task_card_pdf_path, output_path):
+    writer = PdfWriter()
+    order_reader = PdfReader(order_pdf_path)
+    for page in order_reader.pages:
+        writer.add_page(page)
+
+    task_card_reader = PdfReader(task_card_pdf_path)
+    for page in task_card_reader.pages:
+        writer.add_page(page)
+
+    with open(output_path, "wb") as out_file:
+        writer.write(out_file)
+    st.success(f"Penggabungan selesai. Hasil disimpan di {output_path}")
 
   # Fungsi untuk menemukan halaman-halaman Task Card di dalam PDF bundel berdasarkan nomor Task Card
 def find_task_card_pages(pdf_path, task_card_number):
