@@ -78,10 +78,6 @@ def split_task_card(pdf_path, task_card_number, output_folder):
     with open(output_pdf, "wb") as out_file:
         writer.write(out_file)
 
-    # Menambahkan watermark
-    watermark_output_pdf = f"{output_folder}/{task_card_number}_watermarked.pdf"
-    add_watermark(output_pdf, watermark_output_pdf)
-
     # Hapus file sementara tanpa watermark
     os.remove(output_pdf)
 
