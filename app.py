@@ -66,7 +66,7 @@ def find_configuration_code(registration_number, config_data):
 def split_task_card(pdf_path, task_card_number, output_folder):
     pages = find_task_card_pages(pdf_path, task_card_number)
     if not pages:
-        st.warning(f"Task card {task_card_number} tidak ditemukan di PDF bundel.")
+        #st.warning(f"Task card {task_card_number} tidak ditemukan di PDF bundel.")
         return None
 
     writer = PdfWriter()
