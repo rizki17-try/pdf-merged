@@ -1,5 +1,2 @@
 streamlit
-pandas
 PyPDF2
-reportlab
-openpyxl
